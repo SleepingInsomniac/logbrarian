@@ -1,0 +1,70 @@
+#!/usr/bin/env ruby
+
+lib = File.expand_path('../../lib', __FILE__)
+$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+
+require 'logbrarian'
+require 'optparse'
+require 'fileutils'
+require 'active_support/core_ext/time/calculations'
+require 'active_support/core_ext/numeric/time'
+
+$stdout.sync = true
+$stdin.sync = true
+
+options = {
+  interval: 1.day,
+  format: "%Y-%m-%d"
+}
+OptionParser.new do |opts|
+  opts.banner = "Usage: <stream> | logbrarian /path/to/file.log [options]"
+
+  opts.on("--version", "Show Version") do
+    $stdout.puts Logbrarian::VERSION
+    exit
+  end
+  
+  opts.on("-h", "--help") do
+    $stdout.puts opts
+    exit
+  end
+  
+  opts.on("-i INTERVAL", "--interval INTERVAL", "Set log rotation interval") do |interval|
+    interval = interval.to_sym
+    if %i[year month week day hour minute second].include?(interval)
+      options[:interval] = 1.send(interval)
+    else
+      throw "Unknown interval: `#{interval}`"
+    end
+  end
+  
+  opts.on("-f FORMAT", "--format FORMAT", "filename format") do |f|
+    options[:format] = f
+  end
+end.parse!
+
+current_path = ARGV.shift
+FileUtils.touch current_path unless File.exist? current_path
+
+if File.birthtime(current_path) < options[:interval].ago
+  # Rotate older file
+  require 'zlib'
+  dir_path = File.dirname(current_path)
+  current_name = File.basename(current_path)[/[^\.]+/]
+  
+  time_stamp = options[:interval].ago.strftime(options[:format])
+  old_log = File.join(dir_path, "#{current_name}_#{time_stamp}.log.gz")
+  Zlib::GzipWriter.open(old_log) do |archive|
+    File.foreach(current_path) do |line|
+      archive.write line
+    end
+  end
+  FileUtils.rm current_path
+  FileUtils.touch current_path
+end
+
+File.open(current_path, 'a') do |log|
+  ARGF.each do |line|
+    log << line
+  end
+end
