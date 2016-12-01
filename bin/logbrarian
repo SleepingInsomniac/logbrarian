@@ -63,7 +63,7 @@ rescue NotImplementedError
   end
 end
 
-if File.birthtime(current_path) < options[:interval].ago
+if birthtime < options[:interval].ago
   # Rotate older file
   require 'zlib'
   current_name = File.basename(current_path)[/[^\.]+/]
