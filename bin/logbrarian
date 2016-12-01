@@ -48,6 +48,21 @@ dir_path = File.dirname(current_path)
 FileUtils.mkdir_p dir_path
 FileUtils.touch current_path unless File.exist? current_path
 
+begin
+  birthtime = File.birthtime(current_path)
+rescue NotImplementedError
+  require 'yaml'
+  store_path = File.expand_path("~/.logbrarian.yml")
+  FileUtils.touch store_path
+  store = YAML.load_file(store_path) || Hash.new
+  birth_string = store[current_path] || Time.now.to_s
+  birthtime = DateTime.parse(birth_string).to_time
+  unless store.has_key(current_path)
+    store[current_path] = birthtime
+    File.open(store_path, 'w') {|f| YAML.dump(store,f) }
+  end
+end
+
 if File.birthtime(current_path) < options[:interval].ago
   # Rotate older file
   require 'zlib'
@@ -62,6 +77,10 @@ if File.birthtime(current_path) < options[:interval].ago
   end
   FileUtils.rm current_path
   FileUtils.touch current_path
+  if store
+    store[current_path] = Time.now.to_s
+    File.open(store_path, 'w') {|f| YAML.dump(store,f) }
+  end
 end
 
 File.open(current_path, 'a') do |log|
