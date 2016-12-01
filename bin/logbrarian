@@ -57,7 +57,7 @@ rescue NotImplementedError
   store = YAML.load_file(store_path) || Hash.new
   birth_string = store[current_path] || Time.now.to_s
   birthtime = DateTime.parse(birth_string).to_time
-  unless store.has_key(current_path)
+  unless store.key?(current_path)
     store[current_path] = birthtime
     File.open(store_path, 'w') {|f| YAML.dump(store,f) }
   end
