@@ -52,11 +52,11 @@ begin
   birthtime = File.birthtime(current_path)
 rescue NotImplementedError
   require 'yaml'
+  require 'date'
   store_path = File.expand_path("~/.logbrarian.yml")
   FileUtils.touch store_path
   store = YAML.load_file(store_path) || Hash.new
-  birth_string = store[current_path].to_s || Time.now.to_s
-  birthtime = DateTime.parse(birth_string).to_time
+  birthtime = store[current_path] || Time.now
   unless store.key?(current_path)
     store[current_path] = birthtime
     File.open(store_path, 'w') {|f| YAML.dump(store,f) }
@@ -78,7 +78,7 @@ if birthtime < options[:interval].ago
   FileUtils.rm current_path
   FileUtils.touch current_path
   if store
-    store[current_path] = Time.now.to_s
+    store[current_path] = Time.now
     File.open(store_path, 'w') {|f| YAML.dump(store,f) }
   end
 end
