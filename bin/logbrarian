@@ -44,12 +44,13 @@ OptionParser.new do |opts|
 end.parse!
 
 current_path = ARGV.shift
+dir_path = File.dirname(current_path)
+FileUtils.mkdir_p dir_path
 FileUtils.touch current_path unless File.exist? current_path
 
 if File.birthtime(current_path) < options[:interval].ago
   # Rotate older file
   require 'zlib'
-  dir_path = File.dirname(current_path)
   current_name = File.basename(current_path)[/[^\.]+/]
   
   time_stamp = options[:interval].ago.strftime(options[:format])
